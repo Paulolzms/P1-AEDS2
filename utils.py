@@ -47,6 +47,31 @@ def le(file_name, seek=0):
   arq.close()
   return registro, hash_seek
 
+def le_registro_especifico(nome_arquivo: str, posicao_registro):
+  with open(nome_arquivo + ".dat", "rb") as arq:
+    cont_registro = 0
+    byte = arq.read(1).decode()
+    registro = ""
+    encontrado = False
+    campo = ""
+
+    while cont_registro <= posicao_registro:
+      registro += byte
+      campo += byte
+      if campo == bin(posicao_registro)[2:] + "|":
+        encontrado = True
+      if byte == "#":
+        cont_registro += 1
+        if encontrado:
+          arq.close()
+          return registro[:-1]
+        registro = ""
+        campo = ""
+      if byte == "|":
+        campo = ""
+      byte = arq.read(1).decode()
+  arq.close()
+
 def tamanho(nome_arquivo: str):
   arq = open(nome_arquivo + ".dat", "r")
   num_registros = 0
@@ -115,3 +140,21 @@ def insertion_sort(nome_arquivo: str):
   arq.close()
   arq_ordenado.close()
 
+def busca_binaria(nome_arquivo: str, chave: int):
+  arq = open(nome_arquivo + "_ordenado.dat", "rb")
+  inicio = 0
+  fim = tamanho(nome_arquivo) - 1
+  arq.seek(0, 0)
+  registro = ""
+
+  while inicio <= fim:
+    meio = (inicio + fim) // 2
+    registro = le_registro_especifico(nome_arquivo + "_ordenado", meio)
+    id_registro = int(registro.split("|")[0], 2)
+    if id_registro == chave:
+      return registro
+    elif chave < id_registro:
+      fim = meio - 1
+    elif chave > id_registro:
+      inicio = meio + 1
+  return None
