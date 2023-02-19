@@ -1,7 +1,8 @@
 import random
 import time
+
 from funcionario import Funcionario
-from chave import *
+from chave import Chave
 
 def criar_base_de_dados(nome_arquivo: str):
   try:
@@ -147,7 +148,7 @@ def insertion_sort(nome_arquivo: str):
   return time.time() - inicio
 
 def busca_binaria(nome_arquivo: str, chave: int):
-  inicio = time.perf_counter()
+  comeco = time.time()
   comparacoes = 0
   arq = open(nome_arquivo + "_ordenado.dat", "rb")
   inicio = 0
@@ -161,15 +162,18 @@ def busca_binaria(nome_arquivo: str, chave: int):
     id_registro = int(registro.split("|")[0], 2)
     if id_registro == chave:
       comparacoes += 1
-      return registro, comparacoes, (time.perf_counter() - inicio)
+      return registro, comparacoes, time.time() - comeco
     elif chave < id_registro:
       fim = meio - 1
     elif chave > id_registro:
       inicio = meio + 1
     comparacoes += 1
-  return None, comparacoes, (time.perf_counter() - inicio)
+
+  return None, comparacoes, time.time() - comeco
 
 def selecao_substituicao(nome_arquivo: str):
+  inicio = time.time()
+  comparacoes = 0
   cont_particao = 1
   pos_seek = 0
   registro = ""
@@ -193,6 +197,7 @@ def selecao_substituicao(nome_arquivo: str):
     if not todos_congelados:
       for j in range(len(M)):
         if M[j].id < menor_id and not M[j].congelado:
+          comparacoes += 1
           menor_id = M[j].id
           menor = M[j]
           menor_pos = j
@@ -229,6 +234,7 @@ def selecao_substituicao(nome_arquivo: str):
   
   saida.close()
   arq.close()
+  return comparacoes, time.time() - inicio
 
 def RegistroFormatado(registro: str, comparacoes: int, tempo, arquivo_funcionario: str):
   if registro is None:
@@ -257,6 +263,6 @@ def RegistroFormatado(registro: str, comparacoes: int, tempo, arquivo_funcionari
   save_func.write(f"\nData de nascimento: {data_nascimento}")
   save_func.write(f"\nSalario: {salario}")
   save_func.write(f"\nComparacoes: {comparacoes}")
-  save_func.write(f"\nTempo gasto: {tempo}")
+  save_func.write(f"\nTempo gasto: {tempo}s")
 
   save_func.close()
