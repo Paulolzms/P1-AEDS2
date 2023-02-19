@@ -1,15 +1,15 @@
 import random
 import time
 from funcionario import Funcionario
-from chave import Chave
+from chave import *
 
 def criar_base_de_dados(nome_arquivo: str):
   try:
-    id_list = [i for i in range(10)]
+    id_list = [i for i in range(5000)]
     arq = open(nome_arquivo + ".dat", "wb")
     i = 0
     
-    while i < 10:
+    while i < 5000:
       func = Funcionario(id = random.choice(id_list))
       id_list.remove(func.id)
       arq.write(bin(func.id)[2:].encode())
@@ -26,7 +26,7 @@ def criar_base_de_dados(nome_arquivo: str):
   except(IOError):
     print(IOError)
     exit(1)
-  print("Base de dados criada")
+  print("Foi criada uma base de dados desordenada.")
   
   arq.close()
 
@@ -83,38 +83,43 @@ def tamanho(nome_arquivo: str):
   arq.close()
   return num_registros
 
+def registro_para_memoria(registro: str):
+  campos = registro.split("|")
+  func = Funcionario(int(campos[0], 2), campos[1], campos[2], campos[3], float(campos[4]))
+  return func
+
 def busca_sequencial(nome_arquivo: str, chave: int):
-  start = time.perf_counter()
-  file = open(nome_arquivo + ".dat", "rb")
+  inicio = time.time()
+  arq = open(nome_arquivo + ".dat", "rb")
   print(f"Pesquisando o funcionário {chave} por busca sequencial...")
-  comparisons = 0
-  byte = file.read(1).decode()
-  saved_register = ""
-  field = ""
+  comparacoes = 0
+  byte = arq.read(1).decode()
+  registro = ""
+  campo = ""
   search_id = bin(chave)[2:]
-  finded = False
+  encontrado = False
 
   while byte:
-    field += byte
-    saved_register += byte
-    if field == search_id + "|":
-      finded = True
-      if byte == "#":
-        comparisons += 1
-        if finded:
-          total_time = time.perf_counter() - start
-          file.close()
-          return saved_register[:-1], comparisons, total_time
-        saved_register = ""
-        field = ""
-      if byte == "|":
-        field = ""
+    campo += byte
+    registro += byte
+    if campo == search_id + "|":
+      encontrado = True
+    if byte == "#":
+      comparacoes += 1
+      if encontrado:
+        arq.close()
+        return registro[:-1], comparacoes, (time.time() - inicio)
+      registro = ""
+      campo = ""
+    if byte == "|":
+      campo = ""
 
-    byte = file.read(1).decode()
-  file.close()
-  return None, comparisons, time.perf_counter() - start
+    byte = arq.read(1).decode()
+  arq.close()
+  return None, comparacoes, (time.time() - inicio)
 
 def insertion_sort(nome_arquivo: str):
+  inicio = time.time()
   tam = tamanho(nome_arquivo)
   arq = open(nome_arquivo + ".dat", "r")
   chaves = [Chave() for _ in range(tam)]
@@ -136,11 +141,14 @@ def insertion_sort(nome_arquivo: str):
   for k in range(tam):
     registro, _ =le(nome_arquivo, chaves[k].posicao)
     arq_ordenado.write(registro.encode() + "#".encode())
-
+  
   arq.close()
   arq_ordenado.close()
+  return time.time() - inicio
 
 def busca_binaria(nome_arquivo: str, chave: int):
+  inicio = time.perf_counter()
+  comparacoes = 0
   arq = open(nome_arquivo + "_ordenado.dat", "rb")
   inicio = 0
   fim = tamanho(nome_arquivo) - 1
@@ -152,9 +160,73 @@ def busca_binaria(nome_arquivo: str, chave: int):
     registro = le_registro_especifico(nome_arquivo + "_ordenado", meio)
     id_registro = int(registro.split("|")[0], 2)
     if id_registro == chave:
-      return registro
+      comparacoes += 1
+      return registro, comparacoes, (time.perf_counter() - inicio)
     elif chave < id_registro:
       fim = meio - 1
     elif chave > id_registro:
       inicio = meio + 1
-  return None
+    comparacoes += 1
+  return None, comparacoes, (time.perf_counter() - inicio)
+
+def selecao_substituicao(nome_arquivo: str):
+  cont_particao = 1
+  pos_seek = 0
+  registro = ""
+  M = [Funcionario() for _ in range(100)]
+  arq = open(nome_arquivo + ".dat", "rb")
+  for i in range(len(M)):
+    arq.seek(pos_seek)
+    registro, pos_seek = le(nome_arquivo, pos_seek)
+    M[i] = registro_para_memoria(registro)
+  saida = open("particoes/saida" + str(cont_particao) + ".dat", "wb")
+
+  while M != []:
+    todos_congelados = True
+    for i in range(len(M)):
+      if not M[i].congelado:
+        todos_congelados = False
+        menor_id = M[i].id
+        menor = M[i]
+        menor_pos = i
+        break
+    if not todos_congelados:
+      for j in range(len(M)):
+        if M[j].id < menor_id and not M[j].congelado:
+          menor_id = M[j].id
+          menor = M[j]
+          menor_pos = j
+      
+      saida.write(bin(menor.id)[2:].encode())
+      saida.write("|".encode())
+      saida.write(menor.nome.encode())
+      saida.write("|".encode())
+      saida.write(menor.cpf.encode())
+      saida.write("|".encode())
+      saida.write(menor.data_nascimento.encode())
+      saida.write("|".encode())
+      saida.write(str(menor.salario).encode())
+      saida.write("#".encode())
+      
+      if pos_seek != 1:
+        arq.seek(pos_seek)
+        registro, pos_seek = le(nome_arquivo, pos_seek)
+      else:
+        registro = ""
+      if registro != "":
+        M[menor_pos] = registro_para_memoria(registro)
+        if M[menor_pos].id < menor.id:
+          M[menor_pos].congelado = True
+      else:
+        M.remove(menor)
+
+    else:
+      saida.close()
+      cont_particao += 1
+      saida = open("particoes/saida" + str(cont_particao) + ".dat", "wb")
+      for k in M:
+        k.congelado = False
+  
+  saida.close()
+  arq.close()
+
