@@ -230,3 +230,33 @@ def selecao_substituicao(nome_arquivo: str):
   saida.close()
   arq.close()
 
+def RegistroFormatado(registro: str, comparacoes: int, tempo, arquivo_funcionario: str):
+  if registro is None:
+    print("Não foi encontrado nenhum funcionário com esse Id.")
+    print(f"O total de comparações foi {comparacoes}, e o tempo gasto foi {tempo}s")
+    return
+
+  campos = registro.split("|")
+  id, nome, cpf, data_nascimento, salario = campos
+
+  print("Funcionário encontrado:\n")
+  print(
+      f"Código: {int(id, 2)}"
+      f"\nNome: {nome}"
+      f"\nCPF: {cpf}"
+      f"\nData de Aniversário: {data_nascimento}"
+      f"\nSalário: {salario}"
+      f"\nComparações: {comparacoes}"
+      f"\nTempo gasto: {tempo}s")
+  
+  save_func = open(arquivo_funcionario, "w")
+  save_func.write("Funcionario encontrado:\n")
+  save_func.write(f"\nCodigo: {int(id, 2)}")
+  save_func.write(f"\nNome: {nome}")
+  save_func.write(f"\nCPF: {cpf}")
+  save_func.write(f"\nData de nascimento: {data_nascimento}")
+  save_func.write(f"\nSalario: {salario}")
+  save_func.write(f"\nComparacoes: {comparacoes}")
+  save_func.write(f"\nTempo gasto: {tempo}")
+
+  save_func.close()
